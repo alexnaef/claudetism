@@ -8,7 +8,15 @@ final class WindowManager {
             return
         }
         guard let screen = NSScreen.main else { return }
-        let frame = screen.visibleFrame
+        // Convert visibleFrame from AppKit coords (origin bottom-left) to
+        // Core Graphics / Accessibility coords (origin top-left).
+        let vf = screen.visibleFrame
+        let frame = CGRect(
+            x: vf.origin.x,
+            y: screen.frame.height - vf.origin.y - vf.height,
+            width: vf.width,
+            height: vf.height
+        )
 
         let grouped = Dictionary(grouping: preset.targets, by: \.appBundleID)
 

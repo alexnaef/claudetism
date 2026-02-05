@@ -12,14 +12,14 @@ struct NormalizedRect: Codable, Equatable {
     func toCGRect(in frame: CGRect) -> CGRect {
         let clampedX = max(0, min(1, x))
         let clampedY = max(0, min(1, y))
-        let clampedW = max(0, min(1, width))
-        let clampedH = max(0, min(1, height))
+        let clampedW = max(0, min(1 - clampedX, width))
+        let clampedH = max(0, min(1 - clampedY, height))
 
-        return CGRect(
-            x: frame.origin.x + frame.size.width * clampedX,
-            y: frame.origin.y + frame.size.height * clampedY,
-            width: frame.size.width * clampedW,
-            height: frame.size.height * clampedH
-        )
+        let px = (frame.origin.x + frame.size.width * clampedX).rounded(.down)
+        let py = (frame.origin.y + frame.size.height * clampedY).rounded(.down)
+        let pr = (frame.origin.x + frame.size.width * (clampedX + clampedW)).rounded(.down)
+        let pb = (frame.origin.y + frame.size.height * (clampedY + clampedH)).rounded(.down)
+
+        return CGRect(x: px, y: py, width: pr - px, height: pb - py)
     }
 }
