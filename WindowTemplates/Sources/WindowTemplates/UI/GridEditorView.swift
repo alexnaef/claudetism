@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GridEditorView: View {
     @Binding var rect: NormalizedRect
+    var otherRects: [NormalizedRect] = []
 
     private let columns = 24
     private let rows = 16
@@ -26,6 +27,39 @@ struct GridEditorView: View {
             ZStack {
                 dotGrid(size: size, cellSize: cellSize, selection: selection)
 
+                // Center crosshair lines
+                Path { path in
+                    path.move(to: CGPoint(x: size.width / 2, y: 0))
+                    path.addLine(to: CGPoint(x: size.width / 2, y: size.height))
+                }
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .allowsHitTesting(false)
+
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: size.height / 2))
+                    path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
+                }
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .allowsHitTesting(false)
+
+                ForEach(Array(otherRects.enumerated()), id: \.offset) { _, otherRect in
+                    let r = CGRect(
+                        x: size.width * otherRect.x,
+                        y: size.height * otherRect.y,
+                        width: size.width * otherRect.width,
+                        height: size.height * otherRect.height
+                    )
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.orange.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                        )
+                        .frame(width: r.width, height: r.height)
+                        .position(x: r.midX, y: r.midY)
+                        .allowsHitTesting(false)
+                }
+
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.accentColor.opacity(isDragging ? 0.18 : 0.08))
                     .background(Color.black.opacity(0.001))
@@ -33,7 +67,6 @@ struct GridEditorView: View {
                     .position(x: selectionRect.midX, y: selectionRect.midY)
                     .contentShape(RoundedRectangle(cornerRadius: 8))
 
-                resizeHandles(in: selectionRect)
             }
             .contentShape(Rectangle())
             .gesture(

@@ -56,14 +56,21 @@ final class WindowManager {
         var value: AnyObject?
         let result = AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &value)
         guard result == .success, let windows = value as? [AXUIElement] else { return [] }
-        return windows
+        return windows.filter { isStandardWindow($0) }
+    }
+
+    private func isStandardWindow(_ window: AXUIElement) -> Bool {
+        var subrole: AnyObject?
+        guard AXUIElementCopyAttributeValue(window, kAXSubroleAttribute as CFString, &subrole) == .success,
+              let role = subrole as? String else { return false }
+        return role == kAXStandardWindowSubrole as String
     }
 
     private func ensureWindowCount(app appElement: AXUIElement, pid: pid_t, needed: Int) async -> [AXUIElement] {
         var windows = getWindows(for: appElement)
         var attempts = 0
         while windows.count < needed && attempts < needed {
-            openNewWindow(for: pid)
+            guard openNewWindow(for: appElement) else { break }
             await waitForNewWindow(appElement: appElement, previousCount: windows.count)
             windows = getWindows(for: appElement)
             attempts += 1
@@ -71,15 +78,44 @@ final class WindowManager {
         return windows
     }
 
-    private func openNewWindow(for pid: pid_t) {
-        let source = CGEventSource(stateID: .hidSystemState)
-        // Virtual key 0x2E = 'N'
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x2E, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x2E, keyDown: false) else { return }
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
-        keyDown.postToPid(pid)
-        keyUp.postToPid(pid)
+    private func openNewWindow(for appElement: AXUIElement) -> Bool {
+        guard let menuItem = findMenuItem(in: appElement, titled: "New Window")
+                ?? findMenuItem(in: appElement, titled: "New OS Window") else {
+            return false
+        }
+        return AXUIElementPerformAction(menuItem, kAXPressAction as CFString) == .success
+    }
+
+    private func findMenuItem(in appElement: AXUIElement, titled target: String) -> AXUIElement? {
+        var menuBarValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarValue) == .success,
+              let menuBar = menuBarValue as! AXUIElement? else { return nil }
+
+        for menu in axChildren(of: menuBar) {
+            for item in axChildren(of: menu) {
+                var titleValue: AnyObject?
+                if AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleValue) == .success,
+                   let title = titleValue as? String, title == target {
+                    return item
+                }
+                // Check one level deeper (submenu items live inside a child menu)
+                for subItem in axChildren(of: item) {
+                    var subTitleValue: AnyObject?
+                    if AXUIElementCopyAttributeValue(subItem, kAXTitleAttribute as CFString, &subTitleValue) == .success,
+                       let subTitle = subTitleValue as? String, subTitle == target {
+                        return subItem
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    private func axChildren(of element: AXUIElement) -> [AXUIElement] {
+        var value: AnyObject?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success,
+              let children = value as? [AXUIElement] else { return [] }
+        return children
     }
 
     private func waitForNewWindow(appElement: AXUIElement, previousCount: Int) async {

@@ -47,7 +47,10 @@ struct PresetEditorView: View {
                         .font(.headline)
 
                     if let binding = selectedTargetBinding {
-                        TargetEditorView(target: binding)
+                        let others = preset.targets
+                            .filter { $0.id != selectedTargetID }
+                            .map(\.rect)
+                        TargetEditorView(target: binding, otherRects: others)
                             .environmentObject(appState)
                     } else {
                         Text("Select a target to edit its layout.")
@@ -99,6 +102,7 @@ struct PresetEditorView: View {
 
 private struct TargetEditorView: View {
     @Binding var target: Target
+    var otherRects: [NormalizedRect] = []
     @EnvironmentObject private var appState: AppState
     @State private var appQuery: String = ""
 
@@ -126,7 +130,7 @@ private struct TargetEditorView: View {
                     .textFieldStyle(.roundedBorder)
             }
 
-            GridEditorView(rect: $target.rect)
+            GridEditorView(rect: $target.rect, otherRects: otherRects)
                 .frame(maxWidth: .infinity, maxHeight: 360)
 
             HStack {
