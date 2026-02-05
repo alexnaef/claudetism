@@ -4,26 +4,48 @@ struct MainWindow: View {
     static let windowIdentifier = "main-window"
 
     @EnvironmentObject private var appState: AppState
+    @State private var editingPresetID: UUID?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
             detail
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    withAnimation {
+                        columnVisibility = columnVisibility == .detailOnly
+                            ? .automatic : .detailOnly
+                    }
+                } label: {
+                    Image(systemName: "sidebar.leading")
+                }
+            }
         }
         .frame(minWidth: 900, minHeight: 600)
     }
 
     private var sidebar: some View {
         VStack(spacing: 0) {
-            List(selection: $appState.selectedPresetID) {
+            List(selection: deferredPresetSelection) {
                 ForEach(appState.presetStore.presets) { preset in
-                    Text(preset.name)
-                        .tag(preset.id)
+                    if editingPresetID == preset.id, let binding = binding(for: preset) {
+                        TextField("Preset Name", text: binding.name)
+                            .onSubmit { editingPresetID = nil }
+                            .tag(preset.id)
+                    } else {
+                        Text(preset.name)
+                            .tag(preset.id)
+                            .onTapGesture(count: 2) { editingPresetID = preset.id }
+                    }
                 }
                 .onDelete(perform: deletePresets)
             }
             .listStyle(.sidebar)
+            .toolbar(removing: .sidebarToggle)
 
             HStack {
                 Button(action: appState.addPreset) {
@@ -75,6 +97,17 @@ struct MainWindow: View {
         return Binding(
             get: { appState.presetStore.presets[index] },
             set: { appState.presetStore.presets[index] = $0 }
+        )
+    }
+
+    /// Defers selection writes to the next run-loop tick so NSTableView's
+    /// delegate callback has returned before SwiftUI re-evaluates the List.
+    private var deferredPresetSelection: Binding<UUID?> {
+        Binding(
+            get: { appState.selectedPresetID },
+            set: { newValue in
+                DispatchQueue.main.async { appState.selectedPresetID = newValue }
+            }
         )
     }
 

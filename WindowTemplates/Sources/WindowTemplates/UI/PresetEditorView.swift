@@ -8,20 +8,19 @@ struct PresetEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                TextField("Preset Name", text: $preset.name)
-                    .textFieldStyle(.roundedBorder)
-                Spacer()
-            }
-
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Targets")
                         .font(.headline)
-                    List(selection: $selectedTargetID) {
+                    List(selection: deferredTargetSelection) {
                         ForEach(preset.targets) { target in
-                            Text(targetDisplayName(for: target))
-                                .tag(target.id)
+                            HStack(spacing: 8) {
+                                targetIcon(for: target)
+                                    .resizable()
+                                    .frame(width: 24, height: 24)
+                                Text(targetDisplayName(for: target))
+                            }
+                            .tag(target.id)
                         }
                         .onDelete(perform: deleteTargets)
                     }
@@ -43,9 +42,6 @@ struct PresetEditorView: View {
                 .frame(width: 260)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Layout")
-                        .font(.headline)
-
                     if let binding = selectedTargetBinding {
                         let others = preset.targets
                             .filter { $0.id != selectedTargetID }
@@ -68,6 +64,15 @@ struct PresetEditorView: View {
         return preset.targets.first { $0.id == id }
     }
 
+    private var deferredTargetSelection: Binding<UUID?> {
+        Binding(
+            get: { selectedTargetID },
+            set: { newValue in
+                DispatchQueue.main.async { selectedTargetID = newValue }
+            }
+        )
+    }
+
     private var selectedTargetBinding: Binding<Target>? {
         guard let id = selectedTargetID,
               let index = preset.targets.firstIndex(where: { $0.id == id }) else { return nil }
@@ -87,6 +92,13 @@ struct PresetEditorView: View {
         DispatchQueue.main.async {
             selectedTargetID = preset.targets.first?.id
         }
+    }
+
+    private func targetIcon(for target: Target) -> Image {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: target.appBundleID) {
+            return Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+        }
+        return Image(nsImage: NSWorkspace.shared.icon(for: .applicationBundle))
     }
 
     private func targetDisplayName(for target: Target) -> String {
@@ -126,8 +138,6 @@ private struct TargetEditorView: View {
                 )
                 .frame(maxHeight: 180)
 
-                TextField("Bundle ID", text: $target.appBundleID)
-                    .textFieldStyle(.roundedBorder)
             }
 
             GridEditorView(rect: $target.rect, otherRects: otherRects)
