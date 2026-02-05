@@ -166,11 +166,11 @@ private struct AppResultsList: View {
                     Button {
                         onSelect(app)
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
+                                .resizable()
+                                .frame(width: 24, height: 24)
                             Text(app.displayName)
-                            Text(app.bundleID)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
                         }
                     }
                     .buttonStyle(.plain)
