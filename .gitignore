@@ -1,0 +1,14 @@
+# SwiftPM
+.build/
+.swiftpm/
+
+# Xcode user data
+*.xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+
+# Build outputs
+*.app
+*.dSYM
