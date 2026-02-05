@@ -22,7 +22,6 @@ struct GridEditorView: View {
 
             ZStack {
                 dotGrid(size: size, cellSize: cellSize, selection: selection)
-                    .id("\(selection.minCol)-\(selection.minRow)-\(selection.maxCol)-\(selection.maxRow)")
 
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.accentColor.opacity(isDragging ? 0.18 : 0.08))
@@ -92,26 +91,17 @@ struct GridEditorView: View {
     }
 
     private func dotGrid(size: CGSize, cellSize: CGSize, selection: GridRange) -> some View {
-        Canvas { context, _ in
-            for row in 0..<rows {
-                for col in 0..<columns {
-                    let center = CGPoint(
-                        x: CGFloat(col) * cellSize.width + cellSize.width / 2,
-                        y: CGFloat(row) * cellSize.height + cellSize.height / 2
-                    )
-                    let isSelected = selection.contains(column: col, row: row)
-                    let dotSize = min(cellSize.width, cellSize.height) * (isSelected ? 0.8 : 0.35)
-                    let rect = CGRect(
-                        x: center.x - dotSize / 2,
-                        y: center.y - dotSize / 2,
-                        width: dotSize,
-                        height: dotSize
-                    )
-                    let path = Path(roundedRect: rect, cornerRadius: dotSize * 0.2)
-                    if isSelected {
-                        context.fill(path, with: .color(Color.accentColor))
-                    } else {
-                        context.fill(path, with: .color(.white.opacity(0.2)))
+        let baseDot = min(cellSize.width, cellSize.height)
+        return VStack(spacing: 0) {
+            ForEach(0..<rows, id: \.self) { row in
+                HStack(spacing: 0) {
+                    ForEach(0..<columns, id: \.self) { col in
+                        let isSelected = selection.contains(column: col, row: row)
+                        let dotSize = baseDot * (isSelected ? 0.8 : 0.35)
+                        RoundedRectangle(cornerRadius: dotSize * 0.2)
+                            .fill(isSelected ? Color.accentColor : Color.white.opacity(0.2))
+                            .frame(width: dotSize, height: dotSize)
+                            .frame(width: cellSize.width, height: cellSize.height)
                     }
                 }
             }
@@ -149,7 +139,10 @@ struct GridEditorView: View {
             return .resize(handle)
         }
         if selectionRect.contains(start) {
-            return .move
+            if NSEvent.modifierFlags.contains(.option) {
+                return .move
+            }
+            return .newSelection
         }
         return .newSelection
     }
