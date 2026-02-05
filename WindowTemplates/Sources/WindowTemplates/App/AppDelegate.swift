@@ -4,6 +4,10 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
@@ -58,23 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows {
-            if window.identifier?.rawValue == MainWindow.windowIdentifier {
-                window.makeKeyAndOrderFront(nil)
-                return
-            }
+        for window in NSApp.windows where window.title == "Window Templates" {
+            window.makeKeyAndOrderFront(nil)
+            return
         }
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 960, height: 640),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.identifier = NSUserInterfaceItemIdentifier(MainWindow.windowIdentifier)
-        window.title = "Window Templates"
-        window.center()
-        window.contentView = NSHostingView(rootView: MainWindow().environmentObject(AppState.shared))
-        window.makeKeyAndOrderFront(nil)
     }
 
     @objc private func quit() {

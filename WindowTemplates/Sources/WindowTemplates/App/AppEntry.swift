@@ -6,7 +6,7 @@ struct WindowTemplatesApp: App {
     @StateObject private var appState = AppState.shared
 
     var body: some Scene {
-        WindowGroup("Window Templates") {
+        Window("Window Templates", id: "main") {
             MainWindow()
                 .environmentObject(appState)
         }
