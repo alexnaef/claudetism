@@ -7,65 +7,82 @@ struct GridEditorView: View {
     private let rows = 16
 
     @State private var dragStart: GridCell?
-    @State private var activeHandle: ResizeHandle?
     @State private var moveStartRect: NormalizedRect?
     @State private var moveStartPoint: CGPoint?
+    @State private var activeHandle: ResizeHandle?
+    @State private var dragMode: DragMode?
+    @State private var isDragging = false
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             let cellSize = CGSize(width: size.width / CGFloat(columns), height: size.height / CGFloat(rows))
             let selection = selectionRange()
+            let selectionRect = selectionRect(in: size)
 
             ZStack {
                 dotGrid(size: size, cellSize: cellSize, selection: selection)
+                    .id("\(selection.minCol)-\(selection.minRow)-\(selection.maxCol)-\(selection.maxRow)")
 
-                let selectionRect = selectionRect(in: size)
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.clear)
+                    .fill(Color.accentColor.opacity(isDragging ? 0.18 : 0.08))
+                    .background(Color.black.opacity(0.001))
                     .frame(width: selectionRect.size.width, height: selectionRect.size.height)
                     .position(x: selectionRect.midX, y: selectionRect.midY)
                     .contentShape(RoundedRectangle(cornerRadius: 8))
-                    .gesture(
-                        DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
-                            .onChanged { value in
-                                guard activeHandle == nil else { return }
-                                if moveStartRect == nil {
-                                    moveStartRect = rect
-                                    moveStartPoint = value.startLocation
-                                }
-                                guard let startRect = moveStartRect,
-                                      let startPoint = moveStartPoint else { return }
-                                let deltaX = (value.location.x - startPoint.x) / cellSize.width
-                                let deltaY = (value.location.y - startPoint.y) / cellSize.height
-                                let dx = Double(deltaX) / Double(columns)
-                                let dy = Double(deltaY) / Double(rows)
-                                var newRect = startRect
-                                newRect.x = clampDouble(startRect.x + dx, min: 0, max: 1 - startRect.width)
-                                newRect.y = clampDouble(startRect.y + dy, min: 0, max: 1 - startRect.height)
-                                rect = newRect
-                            }
-                            .onEnded { _ in
-                                moveStartRect = nil
-                                moveStartPoint = nil
-                            }
-                    )
 
-                resizeHandles(in: selectionRect, cellSize: cellSize)
+                resizeHandles(in: selectionRect)
             }
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 0)
+                DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
                     .onChanged { value in
-                        if activeHandle != nil { return }
-                        if moveStartRect != nil { return }
-                        let startCell = dragStart ?? cell(for: value.startLocation, cellSize: cellSize)
-                        dragStart = startCell
-                        let current = cell(for: value.location, cellSize: cellSize)
-                        rect = normalizedRect(from: startCell, to: current)
+                        if dragMode == nil {
+                            dragMode = determineDragMode(start: value.startLocation, selectionRect: selectionRect)
+                            moveStartRect = rect
+                            moveStartPoint = value.startLocation
+                            dragStart = cell(for: value.startLocation, cellSize: cellSize)
+                        }
+                        isDragging = true
+
+                        switch dragMode {
+                        case .resize(let handle):
+                            activeHandle = handle
+                            let gridPoint = value.location
+                            let col = clamp(Int(gridPoint.x / cellSize.width), min: 0, max: columns - 1)
+                            let row = clamp(Int(gridPoint.y / cellSize.height), min: 0, max: rows - 1)
+                            let updated = updatedRange(for: handle, with: GridCell(column: col, row: row))
+                            rect = normalizedRect(
+                                from: GridCell(column: updated.minCol, row: updated.minRow),
+                                to: GridCell(column: updated.maxCol, row: updated.maxRow)
+                            )
+                        case .move:
+                            guard let startRect = moveStartRect,
+                                  let startPoint = moveStartPoint else { return }
+                            let deltaX = (value.location.x - startPoint.x) / cellSize.width
+                            let deltaY = (value.location.y - startPoint.y) / cellSize.height
+                            let dx = Double(deltaX) / Double(columns)
+                            let dy = Double(deltaY) / Double(rows)
+                            var newRect = startRect
+                            newRect.x = clampDouble(startRect.x + dx, min: 0, max: 1 - startRect.width)
+                            newRect.y = clampDouble(startRect.y + dy, min: 0, max: 1 - startRect.height)
+                            rect = newRect
+                        case .newSelection:
+                            let startCell = dragStart ?? cell(for: value.startLocation, cellSize: cellSize)
+                            dragStart = startCell
+                            let current = cell(for: value.location, cellSize: cellSize)
+                            rect = normalizedRect(from: startCell, to: current)
+                        case .none:
+                            break
+                        }
                     }
                     .onEnded { _ in
                         dragStart = nil
+                        dragMode = nil
+                        activeHandle = nil
+                        moveStartRect = nil
+                        moveStartPoint = nil
+                        isDragging = false
                     }
             )
         }
@@ -127,6 +144,42 @@ struct GridEditorView: View {
         return CGRect(origin: origin, size: selectionSize)
     }
 
+    private func determineDragMode(start: CGPoint, selectionRect: CGRect) -> DragMode {
+        if let handle = handleHitTest(at: start, selectionRect: selectionRect) {
+            return .resize(handle)
+        }
+        if selectionRect.contains(start) {
+            return .move
+        }
+        return .newSelection
+    }
+
+    private func handleHitTest(at point: CGPoint, selectionRect: CGRect) -> ResizeHandle? {
+        let hitRadius: CGFloat = 10
+        for handle in ResizeHandle.allCases {
+            let handlePoint = handle.point(in: selectionRect)
+            let dx = point.x - handlePoint.x
+            let dy = point.y - handlePoint.y
+            if (dx * dx + dy * dy) <= hitRadius * hitRadius {
+                return handle
+            }
+        }
+        let edgeThreshold: CGFloat = 6
+        if abs(point.x - selectionRect.minX) <= edgeThreshold && point.y >= selectionRect.minY && point.y <= selectionRect.maxY {
+            return .left
+        }
+        if abs(point.x - selectionRect.maxX) <= edgeThreshold && point.y >= selectionRect.minY && point.y <= selectionRect.maxY {
+            return .right
+        }
+        if abs(point.y - selectionRect.minY) <= edgeThreshold && point.x >= selectionRect.minX && point.x <= selectionRect.maxX {
+            return .top
+        }
+        if abs(point.y - selectionRect.maxY) <= edgeThreshold && point.x >= selectionRect.minX && point.x <= selectionRect.maxX {
+            return .bottom
+        }
+        return nil
+    }
+
     private func selectionRange() -> GridRange {
         guard rect.width > 0, rect.height > 0 else {
             return GridRange(minCol: 0, maxCol: 0, minRow: 0, maxRow: 0)
@@ -138,7 +191,7 @@ struct GridEditorView: View {
         return GridRange(minCol: minCol, maxCol: maxCol, minRow: minRow, maxRow: maxRow)
     }
 
-    private func resizeHandles(in selectionRect: CGRect, cellSize: CGSize) -> some View {
+    private func resizeHandles(in selectionRect: CGRect) -> some View {
         let handles = ResizeHandle.allCases
         return ZStack {
             ForEach(handles, id: \.self) { handle in
@@ -148,25 +201,6 @@ struct GridEditorView: View {
                     .frame(width: 10, height: 10)
                     .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
                     .position(point)
-                    .highPriorityGesture(
-                        DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
-                            .onChanged { value in
-                                activeHandle = handle
-                                moveStartRect = nil
-                                moveStartPoint = nil
-                                let gridPoint = value.location
-                                let col = clamp(Int(gridPoint.x / cellSize.width), min: 0, max: columns - 1)
-                                let row = clamp(Int(gridPoint.y / cellSize.height), min: 0, max: rows - 1)
-                                let updated = updatedRange(for: handle, with: GridCell(column: col, row: row))
-                                self.rect = normalizedRect(
-                                    from: GridCell(column: updated.minCol, row: updated.minRow),
-                                    to: GridCell(column: updated.maxCol, row: updated.maxRow)
-                                )
-                            }
-                            .onEnded { _ in
-                                activeHandle = nil
-                            }
-                    )
             }
         }
     }
@@ -267,4 +301,10 @@ private enum ResizeHandle: CaseIterable {
             return CGPoint(x: rect.minX, y: rect.midY)
         }
     }
+}
+
+private enum DragMode {
+    case newSelection
+    case move
+    case resize(ResizeHandle)
 }

@@ -7,12 +7,14 @@ final class AppState: ObservableObject {
 
     let presetStore: PresetStore
     let windowManager: WindowManager
+    let appCatalog: AppCatalog
 
     @Published var selectedPresetID: UUID?
 
     init() {
         self.presetStore = PresetStore()
         self.windowManager = WindowManager()
+        self.appCatalog = AppCatalog()
         self.selectedPresetID = presetStore.presets.first?.id
 
         presetStore.$presets.sink { _ in

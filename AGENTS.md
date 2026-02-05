@@ -19,6 +19,7 @@
 - Applying a preset targets the focused window (or first window) per app bundle ID.
 
 ## Atomic Commits
-- Keep commits small and single‑purpose so they’re faster to review and easier to reason about. citeturn0search9
-- Prefer “atomic” commits that stand alone as stable, independent units (buildable/testable on their own). citeturn0search3
-- Split unrelated changes (e.g., refactor vs. feature) into separate commits to keep reverts and reviews clean. citeturn0search2
+- Keep commits small and single‑purpose so they’re faster to review and easier to reason about.
+- Prefer “atomic” commits that stand alone as stable, independent units (buildable/testable on their own).
+- Split unrelated changes (e.g., refactor vs. feature) into separate commits to keep reverts and reviews clean.
+- Codex should create commits by default, with one commit per logical change unless explicitly asked not to.
