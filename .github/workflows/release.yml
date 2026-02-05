@@ -45,6 +45,44 @@ jobs:
             ```
             ${{ steps.sha.outputs.sha256 }}
             ```
-
-            Update `Casks/window-templates.rb` in `alexnaef/homebrew-tap` with the new version and SHA256.
           generate_release_notes: true
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/alexnaef/homebrew-tap.git tap-repo
+          mkdir -p tap-repo/Casks
+
+          cat > tap-repo/Casks/window-templates.rb << 'CASK'
+          cask "window-templates" do
+          CASK
+
+          cat >> tap-repo/Casks/window-templates.rb << EOF
+            version "${VERSION}"
+            sha256 "${SHA}"
+
+            url "https://github.com/alexnaef/claudetism/releases/download/v#{version}/WindowTemplates.zip"
+            name "Window Templates"
+            desc "Menu bar app for saving and restoring window layouts on macOS"
+            homepage "https://github.com/alexnaef/claudetism"
+
+            depends_on macos: ">= :sonoma"
+
+            app "Window Templates.app"
+
+            zap trash: [
+              "~/Library/Application Support/WindowTemplates",
+            ]
+          end
+          EOF
+
+          cd tap-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/window-templates.rb
+          git commit -m "Update window-templates to ${VERSION}"
+          git push

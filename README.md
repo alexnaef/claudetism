@@ -23,6 +23,16 @@ A macOS menu bar app for saving and restoring window layouts. Define presets wit
 brew install alexnaef/tap/window-templates
 ```
 
+This downloads a pre-built `Window Templates.app` and moves it to `/Applications`.
+
+### Update
+
+```
+brew upgrade window-templates
+```
+
+New versions are published automatically — when a release is tagged, CI builds the app and updates the Homebrew tap.
+
 ### Manual
 
 Download `WindowTemplates.zip` from the [latest release](https://github.com/alexnaef/claudetism/releases/latest), unzip it, and move `Window Templates.app` to `/Applications`.
@@ -41,3 +51,19 @@ Or use the bundled script to produce a signed `.app` bundle:
 ```
 
 The app bundle will be in `build/Window Templates.app`.
+
+## Release workflow
+
+Pushing a version tag triggers the full pipeline:
+
+```
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+1. CI builds the `.app` bundle on macOS
+2. Creates a GitHub Release with the zip attached
+3. Automatically updates the Homebrew cask in [`alexnaef/homebrew-tap`](https://github.com/alexnaef/homebrew-tap)
+
+### Setup
+
+For the tap auto-update to work, add a `TAP_GITHUB_TOKEN` secret to this repo — a personal access token with `repo` scope for `alexnaef/homebrew-tap`.
