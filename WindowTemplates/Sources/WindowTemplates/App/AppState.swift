@@ -17,6 +17,12 @@ final class AppState: ObservableObject {
         self.appCatalog = AppCatalog()
         self.selectedPresetID = presetStore.presets.first?.id
 
+        presetStore.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }.store(in: &cancellables)
+
         presetStore.$presets.sink { _ in
             NotificationCenter.default.post(name: AppState.presetsDidChange, object: nil)
         }.store(in: &cancellables)
