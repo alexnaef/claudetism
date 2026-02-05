@@ -34,8 +34,31 @@ final class AppState: ObservableObject {
     func deletePreset(_ preset: Preset) {
         presetStore.presets.removeAll { $0.id == preset.id }
         if selectedPresetID == preset.id {
-            selectedPresetID = presetStore.presets.first?.id
+            // Avoid reentrant selection changes during NSTableView delegate callbacks.
+            DispatchQueue.main.async {
+                self.selectedPresetID = self.presetStore.presets.first?.id
+            }
         }
         presetStore.save()
+    }
+
+    func deletePresets(at offsets: IndexSet) {
+        let removedIDs = offsets.compactMap { presetStore.presets[safe: $0]?.id }
+        presetStore.presets.remove(atOffsets: offsets)
+        if let selectedID = selectedPresetID,
+           removedIDs.contains(selectedID) {
+            // Avoid reentrant selection changes during NSTableView delegate callbacks.
+            DispatchQueue.main.async {
+                self.selectedPresetID = self.presetStore.presets.first?.id
+            }
+        }
+        presetStore.save()
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        guard indices.contains(index) else { return nil }
+        return self[index]
     }
 }

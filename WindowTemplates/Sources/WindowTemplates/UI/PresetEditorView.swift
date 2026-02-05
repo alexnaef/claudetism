@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct PresetEditorView: View {
     @Binding var preset: Preset
@@ -73,12 +74,16 @@ struct PresetEditorView: View {
     private func deleteSelectedTarget() {
         guard let target = selectedTarget else { return }
         preset.targets.removeAll { $0.id == target.id }
-        selectedTargetID = preset.targets.first?.id
+        DispatchQueue.main.async {
+            selectedTargetID = preset.targets.first?.id
+        }
     }
 
     private func deleteTargets(at offsets: IndexSet) {
         preset.targets.remove(atOffsets: offsets)
-        selectedTargetID = preset.targets.first?.id
+        DispatchQueue.main.async {
+            selectedTargetID = preset.targets.first?.id
+        }
     }
 
     private func targetDisplayName(for target: Target) -> String {

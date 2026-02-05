@@ -84,10 +84,7 @@ struct MainWindow: View {
     }
 
     private func deletePresets(at offsets: IndexSet) {
-        let presets = appState.presetStore.presets
-        for index in offsets {
-            appState.deletePreset(presets[index])
-        }
+        appState.deletePresets(at: offsets)
     }
 }
 
