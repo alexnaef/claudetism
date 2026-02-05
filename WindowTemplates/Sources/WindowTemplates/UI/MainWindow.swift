@@ -30,7 +30,7 @@ struct MainWindow: View {
 
     private var sidebar: some View {
         VStack(spacing: 0) {
-            List(selection: deferredPresetSelection) {
+            List(selection: $appState.selectedPresetID) {
                 ForEach(appState.presetStore.presets) { preset in
                     if editingPresetID == preset.id, let binding = binding(for: preset) {
                         TextField("Preset Name", text: binding.name)
@@ -97,17 +97,6 @@ struct MainWindow: View {
         return Binding(
             get: { appState.presetStore.presets[index] },
             set: { appState.presetStore.presets[index] = $0 }
-        )
-    }
-
-    /// Defers selection writes to the next run-loop tick so NSTableView's
-    /// delegate callback has returned before SwiftUI re-evaluates the List.
-    private var deferredPresetSelection: Binding<UUID?> {
-        Binding(
-            get: { appState.selectedPresetID },
-            set: { newValue in
-                DispatchQueue.main.async { appState.selectedPresetID = newValue }
-            }
         )
     }
 

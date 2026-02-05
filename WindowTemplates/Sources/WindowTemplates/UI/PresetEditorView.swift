@@ -12,7 +12,7 @@ struct PresetEditorView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Targets")
                         .font(.headline)
-                    List(selection: deferredTargetSelection) {
+                    List(selection: $selectedTargetID) {
                         ForEach(preset.targets) { target in
                             HStack(spacing: 8) {
                                 targetIcon(for: target)
@@ -62,15 +62,6 @@ struct PresetEditorView: View {
     private var selectedTarget: Target? {
         guard let id = selectedTargetID else { return nil }
         return preset.targets.first { $0.id == id }
-    }
-
-    private var deferredTargetSelection: Binding<UUID?> {
-        Binding(
-            get: { selectedTargetID },
-            set: { newValue in
-                DispatchQueue.main.async { selectedTargetID = newValue }
-            }
-        )
     }
 
     private var selectedTargetBinding: Binding<Target>? {
