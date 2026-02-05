@@ -12,6 +12,9 @@ struct GridEditorView: View {
     @State private var activeHandle: ResizeHandle?
     @State private var dragMode: DragMode?
     @State private var isDragging = false
+    @State private var liveRect: NormalizedRect?
+
+    private var displayRect: NormalizedRect { liveRect ?? rect }
 
     var body: some View {
         GeometryReader { proxy in
@@ -74,6 +77,7 @@ struct GridEditorView: View {
                         case .none:
                             break
                         }
+                        liveRect = rect
                     }
                     .onEnded { _ in
                         dragStart = nil
@@ -88,6 +92,11 @@ struct GridEditorView: View {
         .background(Color.black.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .coordinateSpace(name: "grid")
+        .onChange(of: rect) { _, _ in
+            if !isDragging {
+                liveRect = nil
+            }
+        }
     }
 
     private func dotGrid(size: CGSize, cellSize: CGSize, selection: GridRange) -> some View {
@@ -129,8 +138,8 @@ struct GridEditorView: View {
     }
 
     private func selectionRect(in size: CGSize) -> CGRect {
-        let origin = CGPoint(x: size.width * rect.x, y: size.height * rect.y)
-        let selectionSize = CGSize(width: size.width * rect.width, height: size.height * rect.height)
+        let origin = CGPoint(x: size.width * displayRect.x, y: size.height * displayRect.y)
+        let selectionSize = CGSize(width: size.width * displayRect.width, height: size.height * displayRect.height)
         return CGRect(origin: origin, size: selectionSize)
     }
 
@@ -174,13 +183,13 @@ struct GridEditorView: View {
     }
 
     private func selectionRange() -> GridRange {
-        guard rect.width > 0, rect.height > 0 else {
+        guard displayRect.width > 0, displayRect.height > 0 else {
             return GridRange(minCol: 0, maxCol: 0, minRow: 0, maxRow: 0)
         }
-        let minCol = clamp(Int(floor(rect.x * Double(columns))), min: 0, max: columns - 1)
-        let minRow = clamp(Int(floor(rect.y * Double(rows))), min: 0, max: rows - 1)
-        let maxCol = clamp(Int(ceil((rect.x + rect.width) * Double(columns)) - 1), min: 0, max: columns - 1)
-        let maxRow = clamp(Int(ceil((rect.y + rect.height) * Double(rows)) - 1), min: 0, max: rows - 1)
+        let minCol = clamp(Int(floor(displayRect.x * Double(columns))), min: 0, max: columns - 1)
+        let minRow = clamp(Int(floor(displayRect.y * Double(rows))), min: 0, max: rows - 1)
+        let maxCol = clamp(Int(ceil((displayRect.x + displayRect.width) * Double(columns)) - 1), min: 0, max: columns - 1)
+        let maxRow = clamp(Int(ceil((displayRect.y + displayRect.height) * Double(rows)) - 1), min: 0, max: rows - 1)
         return GridRange(minCol: minCol, maxCol: maxCol, minRow: minRow, maxRow: maxRow)
     }
 

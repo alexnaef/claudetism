@@ -18,9 +18,9 @@ struct PresetEditorView: View {
                     Text("Targets")
                         .font(.headline)
                     List(selection: $selectedTargetID) {
-                        ForEach($preset.targets) { $target in
-                            Text(targetDisplayName(for: target.wrappedValue))
-                                .tag(target.id.wrappedValue)
+                        ForEach(preset.targets) { target in
+                            Text(targetDisplayName(for: target))
+                                .tag(target.id)
                         }
                         .onDelete(perform: deleteTargets)
                     }
