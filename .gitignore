@@ -10,5 +10,6 @@ DerivedData/
 *.xcworkspace/
 
 # Build outputs
+build/
 *.app
 *.dSYM
