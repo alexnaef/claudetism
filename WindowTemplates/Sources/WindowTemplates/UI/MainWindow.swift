@@ -41,7 +41,7 @@ struct MainWindow: View {
 
                 Button("Apply") {
                     if let preset = selectedPreset {
-                        appState.windowManager.apply(preset: preset)
+                        Task { await appState.windowManager.apply(preset: preset) }
                     }
                 }
                 .disabled(selectedPreset == nil)

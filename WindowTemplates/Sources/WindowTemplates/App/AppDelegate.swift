@@ -53,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let preset = AppState.shared.presetStore.presets.first(where: { $0.id == id }) else {
             return
         }
-        AppState.shared.windowManager.apply(preset: preset)
+        Task { await AppState.shared.windowManager.apply(preset: preset) }
     }
 
     @objc private func openMainWindow() {
