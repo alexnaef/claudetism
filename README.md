@@ -64,6 +64,4 @@ git tag v0.1.0 && git push origin v0.1.0
 2. Creates a GitHub Release with the zip attached
 3. Automatically updates the Homebrew cask in [`alexnaef/homebrew-tap`](https://github.com/alexnaef/homebrew-tap)
 
-### Setup
 
-For the tap auto-update to work, add a `TAP_GITHUB_TOKEN` secret to this repo — a personal access token with `repo` scope for `alexnaef/homebrew-tap`.
